@@ -21,11 +21,6 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-      - name: Debug Secret Presence
-        run: |
-          echo "Client ID length: ${#ARM_CLIENT_ID}"
-        env:
-          ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
       - name: Azure Login via OIDC
         uses: azure/login@v2
         with:
