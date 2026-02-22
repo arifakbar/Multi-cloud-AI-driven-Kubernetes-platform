@@ -9,7 +9,7 @@ terraform {
     bucket         = "terraformx-aws"
     key            = "terraform.tfstate"
     region         = "us-east-1"
-    dynamodb_table = "terraform-lock"
+    use_lockfile = "terraform-lock"
   }
 }
 
