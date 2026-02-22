@@ -52,11 +52,6 @@ jobs:
         run: terraform init
       - name: Terraform Plan
         run: terraform plan -out=tfplan
-      - name: Upload Plan Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: azure-tfplan
-          path: terraform/azure/tfplan
 
 # ----------------------------
 # AWS Terraform Plan
@@ -82,11 +77,6 @@ jobs:
         run: terraform init
       - name: Terraform Plan
         run: terraform plan -out=tfplan
-      - name: Upload Plan Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: aws-tfplan
-          path: terraform/aws/tfplan
 
 # ----------------------------
 # Azure Apply
@@ -111,11 +101,8 @@ jobs:
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
-      - name: Download Plan Artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: azure-tfplan
-          path: terraform/azure
+      - name: Terraform Plan
+        run: terraform plan -out=tfplan
       - name: Terraform Apply
         run: terraform apply -auto-approve tfplan
 
@@ -141,10 +128,7 @@ jobs:
           aws-region: ${{ env.AWS_REGION }}
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
-      - name: Download Plan Artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: aws-tfplan
-          path: terraform/aws
+      - name: Terraform Plan
+        run: terraform plan -out=tfplan
       - name: Terraform Apply
         run: terraform apply -auto-approve tfplan
