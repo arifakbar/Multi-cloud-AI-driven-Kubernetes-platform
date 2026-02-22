@@ -22,9 +22,9 @@ jobs:
     runs-on: ubuntu-latest
     if: ${{ github.event.inputs.cloud == 'all' || github.event.inputs.cloud == 'azure' }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Azure Login
-        uses: azure/login@v1
+        uses: azure/login@v2
         with:
           client-id: ${{ secrets.AZ_CLIENT_ID }}
           tenant-id: ${{ secrets.AZ_TENANT_ID }}
@@ -35,7 +35,7 @@ jobs:
           terraform init
           terraform plan -out=tfplan
       - name: Upload Azure Plan Artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: azure-tfplan
           path: terraform/azure/tfplan
@@ -47,7 +47,7 @@ jobs:
     runs-on: ubuntu-latest
     if: ${{ github.event.inputs.cloud == 'all' || github.event.inputs.cloud == 'aws' }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Configure AWS Credentials via OIDC
         uses: aws-actions/configure-aws-credentials@v2
         with:
@@ -59,7 +59,7 @@ jobs:
           terraform init
           terraform plan -out=tfplan
       - name: Upload AWS Plan Artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: aws-tfplan
           path: terraform/aws/tfplan
@@ -72,7 +72,7 @@ jobs:
     needs: [azure-plan, aws-plan]
     if: ${{ github.event_name == 'workflow_dispatch' }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Manual Approval
         uses: hmarr/auto-approve-action@v2
@@ -84,7 +84,7 @@ jobs:
       # ----------------------------
       - name: Azure Login
         if: ${{ github.event.inputs.cloud == 'all' || github.event.inputs.cloud == 'azure' }}
-        uses: azure/login@v1
+        uses: azure/login@v2
         with:
           client-id: ${{ secrets.AZ_CLIENT_ID }}
           tenant-id: ${{ secrets.AZ_TENANT_ID }}
@@ -92,7 +92,7 @@ jobs:
 
       - name: Download Azure Plan Artifact
         if: ${{ github.event.inputs.cloud == 'all' || github.event.inputs.cloud == 'azure' }}
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: azure-tfplan
           path: terraform/azure
@@ -115,7 +115,7 @@ jobs:
 
       - name: Download AWS Plan Artifact
         if: ${{ github.event.inputs.cloud == 'all' || github.event.inputs.cloud == 'aws' }}
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: aws-tfplan
           path: terraform/aws
