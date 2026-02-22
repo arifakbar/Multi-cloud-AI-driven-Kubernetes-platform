@@ -1,4 +1,4 @@
-name: Multi-Cloud Terraform
+name: Multi-Cloud Infrastructure Deployment
 
 on:
   workflow_dispatch:
@@ -13,71 +13,93 @@ on:
           - azure
           - aws
 
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  # Azure
+  ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+  ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+  ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+  ARM_USE_OIDC: true
+  AWS_REGION: us-east-1
+
 jobs:
 
   # ----------------------------
-  # Azure Plan
+  # Azure Terraform Plan
   # ----------------------------
-  azure-plan:
+  terraform-plan-azure:
+    name: Terraform Plan (Azure)
     runs-on: ubuntu-latest
     if: ${{ github.event.inputs.cloud == 'all' || github.event.inputs.cloud == 'azure' }}
+    defaults:
+      run:
+        working-directory: terraform/azure
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
       - name: Azure Login
         uses: azure/login@v2
         with:
-          client-id: ${{ secrets.AZ_CLIENT_ID }}
-          tenant-id: ${{ secrets.AZ_TENANT_ID }}
-          subscription-id: ${{ secrets.AZ_SUBSCRIPTION_ID }}
-      - name: Terraform Init & Plan (Azure)
-        run: |
-          cd terraform/azure
-          terraform init
-          terraform plan -out=tfplan
-      - name: Upload Azure Plan Artifact
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+      - name: Terraform Init
+        run: terraform init
+      - name: Terraform Plan
+        run: terraform plan -out=tfplan
+      - name: Upload Plan Artifact
         uses: actions/upload-artifact@v4
         with:
           name: azure-tfplan
           path: terraform/azure/tfplan
 
   # ----------------------------
-  # AWS Plan
+  # AWS Terraform Plan
   # ----------------------------
-  aws-plan:
+  terraform-plan-aws:
+    name: Terraform Plan (AWS)
     runs-on: ubuntu-latest
     if: ${{ github.event.inputs.cloud == 'all' || github.event.inputs.cloud == 'aws' }}
+    defaults:
+      run:
+        working-directory: terraform/aws
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
       - name: Configure AWS Credentials via OIDC
         uses: aws-actions/configure-aws-credentials@v2
         with:
           role-to-assume: arn:aws:iam::007222077088:role/Github-Actions
-          aws-region: us-east-1
-      - name: Terraform Init & Plan (AWS)
-        run: |
-          cd terraform/aws
-          terraform init
-          terraform plan -out=tfplan
-      - name: Upload AWS Plan Artifact
+          aws-region: ${{ env.AWS_REGION }}
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+      - name: Terraform Init
+        run: terraform init
+      - name: Terraform Plan
+        run: terraform plan -out=tfplan
+      - name: Upload Plan Artifact
         uses: actions/upload-artifact@v4
         with:
           name: aws-tfplan
           path: terraform/aws/tfplan
 
   # ----------------------------
-  # Apply
+  # Terraform Apply (Hybrid)
   # ----------------------------
-  apply:
+  terraform-apply:
+    name: Terraform Apply
     runs-on: ubuntu-latest
-    needs: [azure-plan, aws-plan]
+    needs: [terraform-plan-azure, terraform-plan-aws]
     if: ${{ github.event_name == 'workflow_dispatch' }}
+    environment: Apply # Approval gate
     steps:
-      - uses: actions/checkout@v4
-
-      - name: Manual Approval
-        uses: hmarr/auto-approve-action@v2
-        with:
-          comment: "Terraform apply approved"
+      - name: Checkout
+        uses: actions/checkout@v4
 
       # ----------------------------
       # Apply Azure
@@ -86,17 +108,18 @@ jobs:
         if: ${{ github.event.inputs.cloud == 'all' || github.event.inputs.cloud == 'azure' }}
         uses: azure/login@v2
         with:
-          client-id: ${{ secrets.AZ_CLIENT_ID }}
-          tenant-id: ${{ secrets.AZ_TENANT_ID }}
-          subscription-id: ${{ secrets.AZ_SUBSCRIPTION_ID }}
-
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      - name: Setup Terraform (Azure)
+        if: ${{ github.event.inputs.cloud == 'all' || github.event.inputs.cloud == 'azure' }}
+        uses: hashicorp/setup-terraform@v3
       - name: Download Azure Plan Artifact
         if: ${{ github.event.inputs.cloud == 'all' || github.event.inputs.cloud == 'azure' }}
         uses: actions/download-artifact@v4
         with:
           name: azure-tfplan
           path: terraform/azure
-
       - name: Terraform Apply (Azure)
         if: ${{ github.event.inputs.cloud == 'all' || github.event.inputs.cloud == 'azure' }}
         run: |
@@ -111,15 +134,16 @@ jobs:
         uses: aws-actions/configure-aws-credentials@v2
         with:
           role-to-assume: arn:aws:iam::007222077088:role/Github-Actions
-          aws-region: us-east-1
-
+          aws-region: ${{ env.AWS_REGION }}
+      - name: Setup Terraform (AWS)
+        if: ${{ github.event.inputs.cloud == 'all' || github.event.inputs.cloud == 'aws' }}
+        uses: hashicorp/setup-terraform@v3
       - name: Download AWS Plan Artifact
         if: ${{ github.event.inputs.cloud == 'all' || github.event.inputs.cloud == 'aws' }}
         uses: actions/download-artifact@v4
         with:
           name: aws-tfplan
           path: terraform/aws
-
       - name: Terraform Apply (AWS)
         if: ${{ github.event.inputs.cloud == 'all' || github.event.inputs.cloud == 'aws' }}
         run: |
