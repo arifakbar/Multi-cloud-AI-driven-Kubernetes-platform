@@ -101,6 +101,8 @@ jobs:
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
+      - name: Terraform Init
+        run: terraform init
       - name: Terraform Plan
         run: terraform plan -out=tfplan
       - name: Terraform Apply
@@ -114,7 +116,7 @@ jobs:
     runs-on: ubuntu-latest
     if: ${{ github.event.inputs.cloud == 'all' || github.event.inputs.cloud == 'aws' }}
     needs: terraform-plan-aws
-    environment: Apply # Approval gate
+    environment: Apply-AWS # Approval gate
     defaults:
       run:
         working-directory: terraform/aws
@@ -128,6 +130,8 @@ jobs:
           aws-region: ${{ env.AWS_REGION }}
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
+      - name: Terraform Init
+        run: terraform init
       - name: Terraform Plan
         run: terraform plan -out=tfplan
       - name: Terraform Apply
