@@ -3,7 +3,7 @@ output "vpc_id" {
 }
 
 output "public_subnet_id" {
-  value = aws_subnet.public.id
+  value = var.enable_public_subnet ? aws_subnet.public[0].id : null
 }
 
 output "private_subnet_ids" {
