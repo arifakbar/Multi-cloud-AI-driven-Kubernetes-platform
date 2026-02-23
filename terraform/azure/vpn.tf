@@ -7,11 +7,12 @@ resource "azurerm_subnet" "gateway" {
 }
 
 #Public IP for VPN Gateway
-resource "azurerm_subnet" "gateway" {
-  name                 = "GatewaySubnet"
-  resource_group_name  = azurerm_resource_group.rg.name
-  virtual_network_name = azurerm_virtual_network.vnet.name
-  address_prefixes     = ["10.0.255.224/27"]
+resource "azurerm_public_ip" "vpn_pip" {
+  name                = "vpn-gateway-pip"
+  location            = azurerm_resource_group.rg.location
+  resource_group_name = azurerm_resource_group.rg.name
+  allocation_method   = "Static"
+  sku                 = "Standard"
 }
 
 #Virtual Network Gateway
