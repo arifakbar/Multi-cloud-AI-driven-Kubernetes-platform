@@ -9,11 +9,9 @@ terraform {
     bucket         = "terraformx-aws"
     key            = "terraform.tfstate"
     region         = "us-east-1"
-    use_lockfile = "terraform-lock"
+    dynamodb_table  = "terraform-lock"
   }
 }
-
-//arn:aws:iam::007222077088:role/Github-Actions
 
 provider "aws" {
   region = var.region # Authentication via OIDC is handled in GitHub Actions, no keys here
