@@ -21,6 +21,7 @@ resource "aws_route_table_association" "public_assoc" {
 
 # Private Route Table
 resource "aws_route_table" "private" {
+  count  = var.enable_nat_gateway ? 1 : 0
   vpc_id = aws_vpc.this.id
 
   route {
@@ -34,7 +35,7 @@ resource "aws_route_table" "private" {
 }
 
 resource "aws_route_table_association" "private_assoc" {
-  for_each = aws_subnet.private
+  for_each = var.enable_nat_gateway ? aws_subnet.private : {}
 
   subnet_id      = each.value.id
   route_table_id = aws_route_table.private.id
