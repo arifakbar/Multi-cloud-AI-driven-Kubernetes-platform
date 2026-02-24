@@ -14,6 +14,12 @@ variable "public_subnet_cidr" {
   default     = null
 }
 
+variable "public_subnet_az" {
+  description = "Availability zone for public subnet"
+  type          = string
+  default     = null
+}
+
 variable "private_subnets" {
   description = "List of private subnets"
   type = list(object({
