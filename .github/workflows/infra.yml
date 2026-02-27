@@ -53,23 +53,25 @@ jobs:
         run: terraform init
       - name: Terraform Plan
         run: terraform plan -out=tfplan
-      - name: Install Ollama
-        run: |
-          curl -fsSL https://ollama.com/install.sh | sh
-      - name: Start Ollama 
-        run: |
-          ollama serve  > /dev/null 2>&1 &
-          sleep 5
-      - name: Pull Mistral Model
-        run: |
-          ollama pull mistral
-      - name: Install Python Dependencies
-        run: |
-          pip install -r ai-engine/requirements.txt
-      - name: Run AI Terraform Review
-        run: |
-          terraform show -json tfplan > plan.json
-          python ai-engine/app.py
+      - name: Debug files
+        run: ls -R
+      # - name: Install Ollama
+      #   run: |
+      #     curl -fsSL https://ollama.com/install.sh | sh
+      # - name: Start Ollama 
+      #   run: |
+      #     ollama serve  > /dev/null 2>&1 &
+      #     sleep 5
+      # - name: Pull Mistral Model
+      #   run: |
+      #     ollama pull mistral
+      # - name: Install Python Dependencies
+      #   run: |
+      #     pip install -r ai-engine/requirements.txt
+      # - name: Run AI Terraform Review
+      #   run: |
+      #     terraform show -json tfplan > plan.json
+      #     python ai-engine/app.py
 
 # ----------------------------
 # AWS Terraform Plan
