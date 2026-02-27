@@ -1,4 +1,5 @@
 import json
+import sys
 from terraform_analyzer import extract_summary
 from llm_client import call_llm_json
 
@@ -19,9 +20,11 @@ def analyze(plan_path: str):
 
 
 if __name__ == "__main__":
-    report = analyze("plan.json")
+    plan_file = sys.argv[1] if len(sys.argv) > 1 else "plan.json"
+
+    report = analyze(plan_file)
+
     print(json.dumps(report, indent=2))
 
-    # Governance rule
     if report["risk_level"] == "high":
         raise SystemExit("High risk detected. Failing pipeline.")

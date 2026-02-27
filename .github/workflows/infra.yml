@@ -35,9 +35,6 @@ jobs:
     name: Terraform Plan (Azure)
     runs-on: ubuntu-latest
     if: ${{ github.event.inputs.cloud == 'all' || github.event.inputs.cloud == 'azure' }}
-    defaults:
-      run:
-        working-directory: terraform/azure
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -53,9 +50,14 @@ jobs:
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
       - name: Terraform Init
+        working-directory: terraform/azure
         run: terraform init
       - name: Terraform Plan
+        working-directory: terraform/azure
         run: terraform plan -out=tfplan
+      - name: Export Plan JSON
+        working-directory: terraform/azure
+        run: terraform show -json tfplan > plan.json
       - name: Install Ollama
         run: |
           curl -fsSL https://ollama.com/install.sh | sh
@@ -67,9 +69,7 @@ jobs:
         run: |
           ollama pull mistral
       - name: Run AI Terraform Review
-        run: |
-          terraform show -json tfplan > plan.json
-          python ai-engine/app.py
+        run: python ai-engine/app.py terraform/azure/plan.json
 
 # ----------------------------
 # AWS Terraform Plan
@@ -78,9 +78,6 @@ jobs:
     name: Terraform Plan (AWS)
     runs-on: ubuntu-latest
     if: ${{ github.event.inputs.cloud == 'all' || github.event.inputs.cloud == 'aws' }}
-    defaults:
-      run:
-        working-directory: terraform/aws
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -95,9 +92,14 @@ jobs:
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
       - name: Terraform Init
+        working-directory: terraform/aws
         run: terraform init
       - name: Terraform Plan
+        working-directory: terraform/aws
         run: terraform plan -out=tfplan
+      - name: Export Plan JSON
+        working-directory: terraform/aws
+        run: terraform show -json tfplan > plan.json
       - name: Install Ollama
         run: |
           curl -fsSL https://ollama.com/install.sh | sh
@@ -109,9 +111,7 @@ jobs:
         run: |
           ollama pull mistral
       - name: Run AI Terraform Review
-        run: |
-          terraform show -json tfplan > plan.json
-          python ai-engine/app.py
+        run: python ai-engine/app.py terraform/aws/plan.json
 # ----------------------------
 # Azure Apply
 # ----------------------------
