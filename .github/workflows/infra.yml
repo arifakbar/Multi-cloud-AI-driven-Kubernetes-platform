@@ -75,6 +75,7 @@ jobs:
 
       - name: Check Severity
         id: severity
+        continue-on-error: true
         run: |
           RESULT=$(python ai-engine/check_severity.py)
           echo "Result: $RESULT"
@@ -106,7 +107,12 @@ jobs:
   terraform-apply-azure:
     name: Terraform Apply (Azure)
     runs-on: ubuntu-latest
-    if: ${{ github.event.inputs.cloud == 'all' || github.event.inputs.cloud == 'azure' }}
+    if: |
+      (github.event.inputs.cloud == 'all' || github.event.inputs.cloud == 'azure') &&
+      (
+        needs.terraform-plan-azure.outputs.high == 'false' ||
+        needs.azure-high-risk-approval.result == 'success'
+      )
     needs:
       - terraform-plan-azure
       - azure-high-risk-approval
@@ -185,6 +191,7 @@ jobs:
 
       - name: Check Severity
         id: severity
+        continue-on-error: true
         run: |
           RESULT=$(python ai-engine/check_severity.py)
           echo "Result: $RESULT"

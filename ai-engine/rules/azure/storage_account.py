@@ -1,6 +1,5 @@
 from base import build_violation, ensure_list
 
-
 def check(resource):
     if resource.get("type") != "azurerm_storage_account":
         return None
@@ -8,7 +7,7 @@ def check(resource):
     after = resource.get("change", {}).get("after", {})
     violations = []
 
-    if after.get("allow_blob_public_access") is True:
+    if after.get("allow_nested_items_to_be_public") is True:
         violations.append(
             build_violation("high", "Azure Storage Account allows public blob access")
         )
@@ -18,7 +17,7 @@ def check(resource):
             build_violation("medium", "Storage account does not enforce TLS 1.2")
         )
 
-    if after.get("enable_https_traffic_only") is False:
+    if after.get("https_traffic_only_enabled") is False:
         violations.append(
             build_violation("medium", "HTTPS traffic is not enforced")
         )
