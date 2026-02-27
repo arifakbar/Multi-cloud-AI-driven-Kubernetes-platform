@@ -23,6 +23,7 @@ env:
   ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
   ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
   ARM_USE_OIDC: true
+
   # AWS
   AWS_ARN: arn:aws:iam::007222077088:role/Github-Actions
   AWS_REGION: us-east-1
@@ -31,142 +32,218 @@ env:
 # Azure Terraform Plan
 # ----------------------------
 jobs:
+
   terraform-plan-azure:
     name: Terraform Plan (Azure)
     runs-on: ubuntu-latest
     if: ${{ github.event.inputs.cloud == 'all' || github.event.inputs.cloud == 'azure' }}
+
+    outputs:
+      high_risk: ${{ steps.severity.outputs.high }}
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      - name: Install Python Dependencies
-        run: |
-          pip install -r ai-engine/requirements.txt 
+
+      - name: Install Python
+        run: pip install -r ai-engine/requirements.txt || true
+
       - name: Azure Login
         uses: azure/login@v2
         with:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
+
       - name: Terraform Init
         working-directory: terraform/azure
         run: terraform init
+
       - name: Terraform Plan
         working-directory: terraform/azure
         run: terraform plan -out=tfplan
+
       - name: Export Plan JSON
         working-directory: terraform/azure
         run: terraform show -json tfplan > plan.json
-      - name: Install Ollama
+
+      - name: Run Deterministic Analyzer
+        run: python ai-engine/analyzer.py terraform/azure/plan.json
+
+      - name: Check Severity
+        id: severity
         run: |
-          curl -fsSL https://ollama.com/install.sh | sh
-      - name: Start Ollama 
-        run: |
-          ollama serve  > /dev/null 2>&1 &
-          sleep 5
-      - name: Pull Mistral Model
-        run: |
-          ollama pull mistral
-      - name: Run AI Terraform Review
-        run: python ai-engine/app.py terraform/azure/plan.json
+          HIGH_COUNT=$(jq '.high' violations.json)
+          echo "High violations: $HIGH_COUNT"
+
+          if [ "$HIGH_COUNT" -gt 0 ]; then
+            echo "high=true" >> $GITHUB_OUTPUT
+          else
+            echo "high=false" >> $GITHUB_OUTPUT
+          fi
 
 # ----------------------------
-# AWS Terraform Plan
+# Azure High Risk Approval
 # ----------------------------
-  terraform-plan-aws:
-    name: Terraform Plan (AWS)
+
+  azure-high-risk-approval:
+    name: Azure High Risk Approval
     runs-on: ubuntu-latest
-    if: ${{ github.event.inputs.cloud == 'all' || github.event.inputs.cloud == 'aws' }}
+    needs: terraform-plan-azure
+    if: needs.terraform-plan-azure.outputs.high_risk == 'true'
+    environment: high-risk-azure
+
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-      - name: Install Python Dependencies
-        run: |
-          pip install -r ai-engine/requirements.txt
-      - name: Configure AWS Credentials via OIDC
-        uses: aws-actions/configure-aws-credentials@v2
-        with:
-          role-to-assume: ${{env.AWS_ARN}}
-          aws-region: ${{ env.AWS_REGION }}
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
-      - name: Terraform Init
-        working-directory: terraform/aws
-        run: terraform init
-      - name: Terraform Plan
-        working-directory: terraform/aws
-        run: terraform plan -out=tfplan
-      - name: Export Plan JSON
-        working-directory: terraform/aws
-        run: terraform show -json tfplan > plan.json
-      - name: Install Ollama
-        run: |
-          curl -fsSL https://ollama.com/install.sh | sh
-      - name: Start Ollama 
-        run: |
-          ollama serve  > /dev/null 2>&1 &
-          sleep 5
-      - name: Pull Mistral Model
-        run: |
-          ollama pull mistral
-      - name: Run AI Terraform Review
-        run: python ai-engine/app.py terraform/aws/plan.json
+      - run: echo "Approval required due to HIGH severity violations."
+
 # ----------------------------
 # Azure Apply
 # ----------------------------
+
   terraform-apply-azure:
     name: Terraform Apply (Azure)
     runs-on: ubuntu-latest
     if: ${{ github.event.inputs.cloud == 'all' || github.event.inputs.cloud == 'azure' }}
-    needs: terraform-plan-azure
-    environment: Apply # Approval gate
+    needs:
+      - terraform-plan-azure
+      - azure-high-risk-approval
+    environment: Apply
+
     defaults:
       run:
         working-directory: terraform/azure
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
       - name: Azure Login
         uses: azure/login@v2
         with:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
+
       - name: Terraform Init
         run: terraform init
+
       - name: Terraform Plan
         run: terraform plan -out=tfplan
+
       - name: Terraform Apply
         run: terraform apply -auto-approve tfplan
+
+
+# ----------------------------
+# AWS Terraform Plan
+# ----------------------------
+
+  terraform-plan-aws:
+    name: Terraform Plan (AWS)
+    runs-on: ubuntu-latest
+    if: ${{ github.event.inputs.cloud == 'all' || github.event.inputs.cloud == 'aws' }}
+
+    outputs:
+      high_risk: ${{ steps.severity.outputs.high }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Python
+        run: pip install -r ai-engine/requirements.txt || true
+
+      - name: Configure AWS Credentials via OIDC
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: ${{ env.AWS_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Terraform Init
+        working-directory: terraform/aws
+        run: terraform init
+
+      - name: Terraform Plan
+        working-directory: terraform/aws
+        run: terraform plan -out=tfplan
+
+      - name: Export Plan JSON
+        working-directory: terraform/aws
+        run: terraform show -json tfplan > plan.json
+
+      - name: Run Deterministic Analyzer
+        run: python ai-engine/analyzer.py terraform/aws/plan.json
+
+      - name: Check Severity
+        id: severity
+        run: |
+          HIGH_COUNT=$(jq '.high' violations.json)
+          echo "High violations: $HIGH_COUNT"
+
+          if [ "$HIGH_COUNT" -gt 0 ]; then
+            echo "high=true" >> $GITHUB_OUTPUT
+          else
+            echo "high=false" >> $GITHUB_OUTPUT
+          fi
+
+# ----------------------------
+# AWS High Risk Approval
+# ----------------------------
+
+  aws-high-risk-approval:
+    name: AWS High Risk Approval
+    runs-on: ubuntu-latest
+    needs: terraform-plan-aws
+    if: needs.terraform-plan-aws.outputs.high_risk == 'true'
+    environment: high-risk-aws
+
+    steps:
+      - run: echo "Approval required due to HIGH severity violations."
 
 # ----------------------------
 # AWS Apply
 # ----------------------------
+
   terraform-apply-aws:
     name: Terraform Apply (AWS)
     runs-on: ubuntu-latest
     if: ${{ github.event.inputs.cloud == 'all' || github.event.inputs.cloud == 'aws' }}
-    needs: terraform-plan-aws
-    environment: Apply-AWS # Approval gate
+    needs:
+      - terraform-plan-aws
+      - aws-high-risk-approval
+    environment: Apply-AWS
+
     defaults:
       run:
         working-directory: terraform/aws
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
       - name: Configure AWS Credentials via OIDC
         uses: aws-actions/configure-aws-credentials@v2
         with:
-          role-to-assume: ${{env.AWS_ARN}}
+          role-to-assume: ${{ env.AWS_ARN }}
           aws-region: ${{ env.AWS_REGION }}
+
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
+
       - name: Terraform Init
         run: terraform init
+
       - name: Terraform Plan
         run: terraform plan -out=tfplan
+
       - name: Terraform Apply
         run: terraform apply -auto-approve tfplan
