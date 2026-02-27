@@ -1,33 +1,26 @@
-from rules.base import Violation
+from base import build_violation, ensure_list
+
 
 def check(resource):
-    violations = []
+    if resource.get("type") != "azurerm_storage_account":
+        return None
 
     after = resource.get("change", {}).get("after", {})
-    address = resource.get("address")
+    violations = []
 
     if after.get("allow_blob_public_access") is True:
-        violations.append(Violation(
-            address,
-            "AZURE_BLOB_PUBLIC_ACCESS",
-            "high",
-            "Azure Storage allows public blob access."
-        ))
+        violations.append(
+            build_violation("high", "Azure Storage Account allows public blob access")
+        )
 
     if after.get("min_tls_version") != "TLS1_2":
-        violations.append(Violation(
-            address,
-            "AZURE_TLS_NOT_1_2",
-            "high",
-            "Storage account must enforce TLS1_2."
-        ))
+        violations.append(
+            build_violation("medium", "Storage account does not enforce TLS 1.2")
+        )
 
-    if after.get("enable_https_traffic_only") is not True:
-        violations.append(Violation(
-            address,
-            "AZURE_HTTPS_ONLY_DISABLED",
-            "high",
-            "HTTPS-only must be enabled."
-        ))
+    if after.get("enable_https_traffic_only") is False:
+        violations.append(
+            build_violation("medium", "HTTPS traffic is not enforced")
+        )
 
-    return violations
+    return ensure_list(violations)

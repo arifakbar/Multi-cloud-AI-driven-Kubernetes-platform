@@ -1,14 +1,26 @@
 import json
 import sys
 
-with open("violations.json") as f:
-    data = json.load(f)
 
-high_found = any(v["severity"].lower() == "high" for v in data.get("violations", []))
+def main():
+    try:
+        with open("violations.json", "r") as f:
+            data = json.load(f)
+    except Exception as e:
+        print(f"Failed to read violations.json: {e}")
+        sys.exit(1)
 
-if high_found:
-    print("HIGH severity violations found.")
-    sys.exit(2)  # special exit code
-else:
-    print("No HIGH severity violations.")
+    high_count = data.get("high", 0)
+
+    print(f"High severity violations: {high_count}")
+
+    if high_count > 0:
+        print("high=true")
+        sys.exit(1)
+
+    print("high=false")
     sys.exit(0)
+
+
+if __name__ == "__main__":
+    main()

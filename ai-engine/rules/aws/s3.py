@@ -1,27 +1,27 @@
-from rules.base import Violation
+from base import build_violation, ensure_list
+
 
 def check(resource):
-    violations = []
+    if resource.get("type") != "aws_s3_bucket":
+        return None
 
     after = resource.get("change", {}).get("after", {})
-    address = resource.get("address")
+    violations = []
 
-    # Public ACL
     if after.get("acl") in ["public-read", "public-read-write"]:
-        violations.append(Violation(
-            address,
-            "S3_PUBLIC_ACL",
-            "high",
-            "S3 bucket has public ACL."
-        ))
+        violations.append(
+            build_violation("high", "S3 bucket has public ACL configured")
+        )
 
-    # Versioning
-    if not after.get("versioning", {}).get("enabled", False):
-        violations.append(Violation(
-            address,
-            "S3_VERSIONING_DISABLED",
-            "medium",
-            "S3 bucket versioning is disabled."
-        ))
+    if after.get("policy"):
+        violations.append(
+            build_violation("medium", "S3 bucket has a policy attached. Ensure it is not public.")
+        )
 
-    return violations
+    versioning = after.get("versioning", {})
+    if isinstance(versioning, dict) and not versioning.get("enabled", False):
+        violations.append(
+            build_violation("low", "S3 bucket versioning is not enabled")
+        )
+
+    return ensure_list(violations)

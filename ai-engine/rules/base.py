@@ -1,14 +1,20 @@
-class Violation:
-    def __init__(self, resource, rule, severity, message):
-        self.resource = resource
-        self.rule = rule
-        self.severity = severity
-        self.message = message
+# ai-engine/base.py
 
-    def to_dict(self):
-        return {
-            "resource": self.resource,
-            "rule": self.rule,
-            "severity": self.severity,
-            "message": self.message,
-        }
+def build_violation(severity: str, message: str):
+    return {
+        "severity": severity,
+        "message": message
+    }
+
+
+def ensure_list(result):
+    """
+    Ensures rule returns list or None
+    """
+    if not result:
+        return None
+
+    if isinstance(result, list):
+        return result
+
+    return [result]

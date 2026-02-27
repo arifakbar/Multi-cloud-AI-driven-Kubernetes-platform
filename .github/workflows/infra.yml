@@ -76,10 +76,10 @@ jobs:
       - name: Check Severity
         id: severity
         run: |
-          HIGH_COUNT=$(jq '.high' violations.json)
-          echo "High violations: $HIGH_COUNT"
+          RESULT=$(python ai-engine/check_severity.py)
+          echo "Result: $RESULT"
 
-          if [ "$HIGH_COUNT" -gt 0 ]; then
+          if echo "$RESULT" | grep -q "high=true"; then
             echo "high=true" >> $GITHUB_OUTPUT
           else
             echo "high=false" >> $GITHUB_OUTPUT
@@ -186,10 +186,10 @@ jobs:
       - name: Check Severity
         id: severity
         run: |
-          HIGH_COUNT=$(jq '.high' violations.json)
-          echo "High violations: $HIGH_COUNT"
+          RESULT=$(python ai-engine/check_severity.py)
+          echo "Result: $RESULT"
 
-          if [ "$HIGH_COUNT" -gt 0 ]; then
+          if echo "$RESULT" | grep -q "high=true"; then
             echo "high=true" >> $GITHUB_OUTPUT
           else
             echo "high=false" >> $GITHUB_OUTPUT
