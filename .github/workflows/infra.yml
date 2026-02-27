@@ -41,6 +41,25 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+      - name: Install Ollama
+        run: |
+          curl -fsSL https://ollama.com/install.sh | sh
+      - name: Start Ollama 
+        run: |
+          ollama serve  > dev/null 2>&1 &
+          sleep 5
+      - name: Pull Mistral Model
+        run: |
+          ollama pull mistral
+      - name: Test Ollama
+        run: |
+          curl http://localhost:11434/api/generate \
+            -H "Content-Type: application/json" \
+            -d '{
+              "model": "mistral",
+              "prompt": "Say hello from CI",
+              "stream": false
+            }' 
       - name: Azure Login
         uses: azure/login@v2
         with:
