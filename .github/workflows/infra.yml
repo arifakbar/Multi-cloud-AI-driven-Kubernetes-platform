@@ -53,8 +53,6 @@ jobs:
         run: terraform init
       - name: Terraform Plan
         run: terraform plan -out=tfplan
-      - name: Terraform Plan Output
-        run: terraform show -json tfplan > plan.json
       - name: Install Ollama
         run: |
           curl -fsSL https://ollama.com/install.sh | sh
@@ -65,15 +63,13 @@ jobs:
       - name: Pull Mistral Model
         run: |
           ollama pull mistral
-      - name: Test Ollama
+      - name: Install Python Dependencies
         run: |
-          curl http://localhost:11434/api/generate \
-            -H "Content-Type: application/json" \
-            -d '{
-              "model": "mistral",
-              "prompt": "Say hello from CI",
-              "stream": false
-            }'
+          pip install -r ai-engine/requirements.txt
+      - name: Run AI Terraform Review
+        run: |
+          terraform show -json tfplan > plan.json
+          python ai-engine/app.py
 
 # ----------------------------
 # AWS Terraform Plan
@@ -99,8 +95,6 @@ jobs:
         run: terraform init
       - name: Terraform Plan
         run: terraform plan -out=tfplan
-      - name: Terraform Plan Output
-        run: terraform show -json tfplan > plan.json
       - name: Install Ollama
         run: |
           curl -fsSL https://ollama.com/install.sh | sh
@@ -111,15 +105,13 @@ jobs:
       - name: Pull Mistral Model
         run: |
           ollama pull mistral
-      - name: Test Ollama
+      - name: Install Python Dependencies
         run: |
-          curl http://localhost:11434/api/generate \
-            -H "Content-Type: application/json" \
-            -d '{
-              "model": "mistral",
-              "prompt": "Say hello from CI",
-              "stream": false
-            }'
+          pip install -r ai-engine/requirements.txt
+      - name: Run AI Terraform Review
+        run: |
+          terraform show -json tfplan > plan.json
+          python ai-engine/app.py
 # ----------------------------
 # Azure Apply
 # ----------------------------
