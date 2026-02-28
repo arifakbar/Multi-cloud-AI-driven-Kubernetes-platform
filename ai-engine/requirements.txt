@@ -2,3 +2,4 @@ requests
 faiss-cpu
 sentence-transformers
 numpy
+scikit-learn
