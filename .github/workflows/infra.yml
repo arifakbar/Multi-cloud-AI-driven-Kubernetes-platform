@@ -107,15 +107,16 @@ jobs:
   terraform-apply-azure:
     name: Terraform Apply (Azure)
     runs-on: ubuntu-latest
-    if: |
-      (github.event.inputs.cloud == 'all' || github.event.inputs.cloud == 'azure') &&
-      (
-        needs.terraform-plan-azure.outputs.high == 'false' ||
-        needs.azure-high-risk-approval.result == 'success'
-      )
     needs:
       - terraform-plan-azure
       - azure-high-risk-approval
+    if: >
+      always () &&
+      (github.event.inputs.cloud == 'all' || github.event.inputs.cloud == 'azure') &&
+      (
+        needs.terraform-plan-azure.outputs.high_risk == 'false' ||
+        needs.azure-high-risk-approval.result == 'success'
+      )
     environment: Apply
 
     defaults:
@@ -223,7 +224,13 @@ jobs:
   terraform-apply-aws:
     name: Terraform Apply (AWS)
     runs-on: ubuntu-latest
-    if: ${{ github.event.inputs.cloud == 'all' || github.event.inputs.cloud == 'aws' }}
+    if: >
+      always () &&
+      (github.event.inputs.cloud == 'all' || github.event.inputs.cloud == 'aws') &&
+      (
+        needs.terraform-plan-aws.outputs.high_risk == 'false' ||
+        needs.aws-high-risk-approval.result == 'success'
+      )
     needs:
       - terraform-plan-aws
       - aws-high-risk-approval
