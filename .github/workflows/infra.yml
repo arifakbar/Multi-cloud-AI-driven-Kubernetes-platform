@@ -76,7 +76,8 @@ jobs:
       - name: Build Vector Index
         run: python ai-engine/embedder.py
     
-
+      - name: Run Retriever
+        run: python ai-engine/rag_retriever.py
 
       - name: Check Severity
         id: severity
@@ -202,7 +203,10 @@ jobs:
 
       - name: Build Vector Index
         run: python ai-engine/embedder.py
-
+      
+      - name: Run Retriever
+        run: python ai-engine/rag_retriever.py
+        
       - name: Check Severity
         id: severity
         run: |
