@@ -23,15 +23,21 @@ def enrich_with_ai(violations):
 
     for v in violations:
         try:
+            issue_text = v.get("issue") or v.get("message") or "security violation"
+
             query = (
-                f"{v['issue']} {v['resource']} "
+                f"{issue_text} {v.get('resource', '')} "
                 f"CIS compliance risk impact remediation"
             )
 
             rag_context = retriever.search(query)
-
+            
             explanation = generator.generate_explanation(
-                violation=v,
+                violation={
+                    "resource": v.get("resource"),
+                    "issue": issue_text,
+                    "severity": v.get("severity")
+                },
                 rag_context=rag_context
             )
 

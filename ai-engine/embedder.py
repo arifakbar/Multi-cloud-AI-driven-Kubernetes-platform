@@ -12,6 +12,7 @@ CHUNK_OVERLAP = 100
 
 MODEL_NAME = "all-MiniLM-L6-v2"
 
+
 def load_markdown_files():
     documents = []
 
@@ -61,22 +62,25 @@ def prepare_chunks(documents):
         chunks = chunk_text(doc["content"])
 
         for chunk in chunks:
-            all_chunks.append(chunk)
-            metadata.append({
-                "source": doc["source"],
-                "text": chunk
-            })
+            if chunk.strip():
+                all_chunks.append(chunk)
+                metadata.append({
+                    "source": doc["source"],
+                    "text": chunk
+                })
 
     return all_chunks, metadata
 
 
 def build_faiss_index(embeddings):
+    if embeddings is None or embeddings.shape[0] == 0:
+        raise ValueError("No embeddings generated. Cannot build FAISS index.")
+
     dimension = embeddings.shape[1]
 
-    # Using cosine similarity via inner product
     index = faiss.IndexFlatIP(dimension)
 
-    # Normalize embeddings for cosine similarity
+    # Normalize for cosine similarity
     faiss.normalize_L2(embeddings)
 
     index.add(embeddings)
@@ -107,6 +111,9 @@ def main():
     embeddings = model.encode(chunks, convert_to_numpy=True)
     embeddings = embeddings.astype("float32")
 
+    if embeddings.shape[0] != len(metadata):
+        raise ValueError("Embeddings count does not match metadata count.")
+
     print("Building FAISS index...")
     index = build_faiss_index(embeddings)
 
@@ -120,6 +127,7 @@ def main():
         pickle.dump(metadata, f)
 
     print("Vector store built successfully!")
+    print(f"Total vectors indexed: {index.ntotal}")
 
 
 if __name__ == "__main__":

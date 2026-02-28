@@ -180,6 +180,9 @@ jobs:
           pip install --upgrade pip
           pip install -r ai-engine/requirements.txt || true
 
+      - name: Build Vector Index
+        run: python ai-engine/embedder.py
+
       - name: Configure AWS Credentials via OIDC
         uses: aws-actions/configure-aws-credentials@v2
         with:
