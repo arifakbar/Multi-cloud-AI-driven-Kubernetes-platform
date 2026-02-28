@@ -204,7 +204,7 @@ jobs:
       - name: Run AI Analyzer
         id: analyzer
         run: |
-          python ai-engine/analyzer.py terraform/azure/plan.json || true
+          python ai-engine/analyzer.py terraform/aws/plan.json || true
         
       - name: Check Severity
         id: severity
