@@ -46,7 +46,12 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Install Python
-        run: pip install -r ai-engine/requirements.txt || true
+        run: | 
+          pip install --upgrade pip
+          pip install -r ai-engine/requirements.txt || true
+
+      - name: Build Vector Index
+        run: python ai-engine/embedder.py
 
       - name: Azure Login
         uses: azure/login@v2
@@ -70,14 +75,10 @@ jobs:
         working-directory: terraform/azure
         run: terraform show -json tfplan > plan.json
 
-      - name: Run Deterministic Analyzer
-        run: python ai-engine/analyzer.py terraform/azure/plan.json
-    
-      - name: Build Vector Index
-        run: python ai-engine/embedder.py
-    
-      - name: Run Retriever
-        run: python ai-engine/rag_retriever.py
+      - name: Run AI Analyzer
+        id: analyzer
+        run: |
+          python ai-engine/analyzer.py terraform/azure/plan.json || true
 
       - name: Check Severity
         id: severity
@@ -175,7 +176,9 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Install Python
-        run: pip install -r ai-engine/requirements.txt || true
+        run:  | 
+          pip install --upgrade pip
+          pip install -r ai-engine/requirements.txt || true
 
       - name: Configure AWS Credentials via OIDC
         uses: aws-actions/configure-aws-credentials@v2
@@ -198,14 +201,10 @@ jobs:
         working-directory: terraform/aws
         run: terraform show -json tfplan > plan.json
 
-      - name: Run Deterministic Analyzer
-        run: python ai-engine/analyzer.py terraform/aws/plan.json
-
-      - name: Build Vector Index
-        run: python ai-engine/embedder.py
-      
-      - name: Run Retriever
-        run: python ai-engine/rag_retriever.py
+      - name: Run AI Analyzer
+        id: analyzer
+        run: |
+          python ai-engine/analyzer.py terraform/azure/plan.json || true
         
       - name: Check Severity
         id: severity

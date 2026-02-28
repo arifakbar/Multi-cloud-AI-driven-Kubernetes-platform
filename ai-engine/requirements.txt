@@ -1,5 +1,7 @@
 requests
-faiss-cpu
+transformers
+torch
+accelerate
 sentence-transformers
-numpy
+faiss-cpu
 scikit-learn
