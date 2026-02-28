@@ -72,6 +72,9 @@ jobs:
 
       - name: Run Deterministic Analyzer
         run: python ai-engine/analyzer.py terraform/azure/plan.json
+    
+      - name: Build Vector Index
+        run: python ai-engine/build_index.py
 
       - name: Check Severity
         id: severity
