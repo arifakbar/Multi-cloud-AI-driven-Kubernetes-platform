@@ -119,7 +119,8 @@ jobs:
       - terraform-plan-azure
       - azure-high-risk-approval
     if: >
-      always () && (github.event.inputs.cloud == 'all' || github.event.inputs.cloud == 'azure') 
+      (github.event.inputs.cloud == 'all' || github.event.inputs.cloud == 'azure') &&
+      needs.azure-high-risk-approval.result == 'success'
 
     environment: Apply
 
@@ -239,8 +240,9 @@ jobs:
     name: Terraform Apply (AWS)
     runs-on: ubuntu-latest
     if: >
-      always () && (github.event.inputs.cloud == 'all' || github.event.inputs.cloud == 'aws') 
-      
+      (github.event.inputs.cloud == 'all' || github.event.inputs.cloud == 'aws') &&
+      needs.aws-high-risk-approval.result == 'success'
+
     needs:
       - terraform-plan-aws
       - aws-high-risk-approval
