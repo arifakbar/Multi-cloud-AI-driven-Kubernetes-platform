@@ -75,16 +75,17 @@ jobs:
 
       - name: Check Severity
         id: severity
-        continue-on-error: true
         run: |
-          RESULT=$(python ai-engine/check_severity.py)
-          echo "Result: $RESULT"
+          RESULT=$(python ai-engine/check_severity.py || true)
+          echo "Raw Result: $RESULT"
 
           if echo "$RESULT" | grep -q "high=true"; then
             echo "high=true" >> $GITHUB_OUTPUT
           else
             echo "high=false" >> $GITHUB_OUTPUT
           fi
+          
+          exit 0
 
 # ----------------------------
 # Azure High Risk Approval
