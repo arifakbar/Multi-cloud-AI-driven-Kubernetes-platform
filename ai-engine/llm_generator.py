@@ -20,29 +20,49 @@ class LLMGenerator:
             device_map="cpu"
         )
 
+        self.model.eval()
+
     def generate_explanation(self, violation, rag_context):
         context_text = "\n\n".join([c["text"] for c in rag_context])
 
         prompt = f"""
-You are a cloud security expert.
+### Instruction:
+You are a senior cloud security engineer reviewing infrastructure.
 
-Violation:
+### Violation:
 Resource: {violation["resource"]}
 Issue: {violation["issue"]}
 Severity: {violation["severity"]}
 
-Security Context:
+### Security Context:
 {context_text}
 
-Explain risk, compliance impact, and remediation.
+### Task:
+Explain:
+1. Security risk
+2. Compliance impact (CIS reference if applicable)
+3. Clear remediation steps
+
+### Answer:
 """
 
         inputs = self.tokenizer(prompt, return_tensors="pt")
 
-        outputs = self.model.generate(
-            **inputs,
-            max_new_tokens=300,
-            temperature=0.2
-        )
+        with torch.no_grad():
+            outputs = self.model.generate(
+                **inputs,
+                max_new_tokens=250,
+                do_sample=False,      # deterministic (better for CI)
+                temperature=None      # remove warning
+            )
 
-        return self.tokenizer.decode(outputs[0], skip_special_tokens=True)
+        decoded = self.tokenizer.decode(outputs[0], skip_special_tokens=True)
+
+        # 🔥 Remove prompt from output
+        response = decoded.split("### Answer:")[-1].strip()
+
+        # Optional cleanup
+        if "###" in response:
+            response = response.split("###")[0].strip()
+
+        return response
