@@ -39,17 +39,15 @@ Return your response STRICTLY in the following Markdown format:
 ## Remediation Steps
 <step-by-step terraform fix>
 
-Do not add extra headings.
-Do not repeat the violation.
-Be concise but professional.
-
-Violation Details:
+Violation:
 Resource: {violation["resource"]}
 Issue: {violation["issue"]}
 Severity: {violation["severity"]}
 
 Security Context:
 {context_text}
+
+### START ANSWER
 """
 
         inputs = self.tokenizer(prompt, return_tensors="pt")
@@ -58,16 +56,17 @@ Security Context:
             outputs = self.model.generate(
                 **inputs,
                 max_new_tokens=300,
-                do_sample=False,    
+                do_sample=False,
                 pad_token_id=self.tokenizer.eos_token_id
             )
 
         decoded = self.tokenizer.decode(outputs[0], skip_special_tokens=True)
 
-        response = decoded.split("### Answer:")[-1].strip()
+        if "### START ANSWER" in decoded:
+            response = decoded.split("### START ANSWER")[-1].strip()
+        else:
+            response = decoded.replace(prompt, "").strip()
 
-        # Optional cleanup
-        if "###" in response:
-            response = response.split("###")[0].strip()
+        response = response.replace(prompt, "").strip()
 
         return response

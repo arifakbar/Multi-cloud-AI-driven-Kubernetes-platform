@@ -82,7 +82,7 @@ jobs:
 
       - name: Publish Security Report
         run: |
-          cat SECURITY_REPORT.md >> $GITHUB_STEP_SUMMARY
+          cat SECURITY_REPORT.md
 
       - name: Check Severity
         id: severity
@@ -215,7 +215,7 @@ jobs:
       
       - name: Publish Security Report
         run: |
-          cat SECURITY_REPORT.md >> $GITHUB_STEP_SUMMARY
+          cat SECURITY_REPORT.md
         
       - name: Check Severity
         id: severity
