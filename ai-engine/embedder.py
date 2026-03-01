@@ -9,8 +9,14 @@ VECTOR_STORE_DIR = "ai-engine/vector_store"
 
 CHUNK_SIZE = 500
 CHUNK_OVERLAP = 100
-
 MODEL_NAME = "all-MiniLM-L6-v2"
+
+DEBUG = False
+
+
+def log(message):
+    if DEBUG:
+        print(message)
 
 
 def load_markdown_files():
@@ -73,61 +79,41 @@ def prepare_chunks(documents):
 
 
 def build_faiss_index(embeddings):
-    if embeddings is None or embeddings.shape[0] == 0:
-        raise ValueError("No embeddings generated. Cannot build FAISS index.")
-
     dimension = embeddings.shape[1]
 
     index = faiss.IndexFlatIP(dimension)
-
-    # Normalize for cosine similarity
     faiss.normalize_L2(embeddings)
-
     index.add(embeddings)
 
     return index
 
 
 def main():
-    print("Loading knowledge base...")
     documents = load_markdown_files()
 
     if not documents:
         raise ValueError("No markdown documents found in knowledge base.")
 
-    print(f"Loaded {len(documents)} documents")
-
-    print("Chunking documents...")
     chunks, metadata = prepare_chunks(documents)
 
     if not chunks:
-        raise ValueError("No chunks generated. Check markdown file contents.")
+        raise ValueError("No chunks generated.")
 
-    print(f"Generated {len(chunks)} chunks")
-
-    print("Generating embeddings...")
     model = SentenceTransformer(MODEL_NAME)
 
     embeddings = model.encode(chunks, convert_to_numpy=True)
     embeddings = embeddings.astype("float32")
 
-    if embeddings.shape[0] != len(metadata):
-        raise ValueError("Embeddings count does not match metadata count.")
-
-    print("Building FAISS index...")
     index = build_faiss_index(embeddings)
 
     os.makedirs(VECTOR_STORE_DIR, exist_ok=True)
 
-    print("Saving FAISS index...")
     faiss.write_index(index, os.path.join(VECTOR_STORE_DIR, "index.faiss"))
 
-    print("Saving metadata...")
     with open(os.path.join(VECTOR_STORE_DIR, "metadata.pkl"), "wb") as f:
         pickle.dump(metadata, f)
 
-    print("Vector store built successfully!")
-    print(f"Total vectors indexed: {index.ntotal}")
+    print(f"Vector store ready. Indexed {index.ntotal} chunks.")
 
 
 if __name__ == "__main__":

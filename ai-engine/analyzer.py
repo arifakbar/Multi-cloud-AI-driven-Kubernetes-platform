@@ -7,11 +7,25 @@ from rag_retriever import RAGRetriever
 from llm_generator import LLMGenerator
 
 
+# Toggle debug logs (set to True locally if needed)
+DEBUG = False
+
+
+def log(message):
+    if DEBUG:
+        print(message)
+
+
+# --------------------------------------
+# AI ENRICHMENT
+# --------------------------------------
+
 def enrich_with_ai(violations):
     """
     Adds RAG retrieval + LLM explanation to each violation.
     Fails gracefully if AI components break.
     """
+
     try:
         retriever = RAGRetriever()
         generator = LLMGenerator()
@@ -30,8 +44,10 @@ def enrich_with_ai(violations):
                 f"CIS compliance risk impact remediation"
             )
 
+            log(f"Embedding query: {query}")
+
             rag_context = retriever.search(query)
-            
+
             explanation = generator.generate_explanation(
                 violation={
                     "resource": v.get("resource"),
@@ -41,7 +57,7 @@ def enrich_with_ai(violations):
                 rag_context=rag_context
             )
 
-            v["rag_context"] = rag_context
+            # Keep RAG internally if needed — not required for CI output
             v["ai_explanation"] = explanation
 
         except Exception as e:
@@ -52,6 +68,44 @@ def enrich_with_ai(violations):
 
     return enriched
 
+
+# --------------------------------------
+# MARKDOWN REPORT GENERATION
+# --------------------------------------
+
+def generate_markdown_report(results):
+    severity_emoji = {
+        "high": "🔴 HIGH",
+        "medium": "🟡 MEDIUM",
+        "low": "🟢 LOW"
+    }
+
+    report = []
+    report.append("# 🛡️ Terraform AI Security Report\n")
+
+    report.append(f"**Total Violations:** {results['total_violations']}")
+    report.append(f"- 🔴 High: {results['high']}")
+    report.append(f"- 🟡 Medium: {results['medium']}")
+    report.append(f"- 🟢 Low: {results['low']}\n")
+
+    report.append("---\n")
+
+    for v in results["violations"]:
+        sev = v["severity"].lower()
+
+        report.append(f"## 🔍 {v['resource']}")
+        report.append(f"**Severity:** {severity_emoji.get(sev, sev.upper())}")
+        report.append(f"**Issue:** {v.get('message')}\n")
+
+        report.append(v.get("ai_explanation", "No AI explanation available."))
+        report.append("\n---\n")
+
+    return "\n".join(report)
+
+
+# --------------------------------------
+# MAIN
+# --------------------------------------
 
 def main():
     if len(sys.argv) < 2:
@@ -67,14 +121,14 @@ def main():
         print(f"Failed to load plan file: {e}")
         sys.exit(1)
 
-    print("Running deterministic rule engine...")
+    print("🔍 Running deterministic rule engine...")
     violations = analyze_plan(plan)
 
     if violations:
-        print("Enhancing violations with RAG + LLM...")
+        print("🤖 Enhancing violations with AI...")
         violations = enrich_with_ai(violations)
     else:
-        print("No violations found. Skipping AI enrichment.")
+        print("✅ No violations found. Skipping AI enrichment.")
 
     # Normalize severity case
     for v in violations:
@@ -92,11 +146,25 @@ def main():
         "violations": violations
     }
 
-    # Write structured output
+    # Save JSON for automation
     with open("violations.json", "w") as f:
         json.dump(output, f, indent=2)
 
-    print(json.dumps(output, indent=2))
+    # Save Markdown report for humans
+    markdown_report = generate_markdown_report(output)
+
+    with open("SECURITY_REPORT.md", "w") as f:
+        f.write(markdown_report)
+
+    # Clean console summary (CI-friendly)
+    print("\n🛡️ SECURITY SUMMARY")
+    print(f"Total: {output['total_violations']} | "
+          f"High: {high_count} | "
+          f"Medium: {medium_count} | "
+          f"Low: {low_count}")
+
+    print("\nDetailed report written to SECURITY_REPORT.md")
+
 
 if __name__ == "__main__":
     main()

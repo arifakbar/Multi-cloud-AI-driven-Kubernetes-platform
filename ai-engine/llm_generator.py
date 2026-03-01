@@ -26,24 +26,30 @@ class LLMGenerator:
         context_text = "\n\n".join([c["text"] for c in rag_context])
 
         prompt = f"""
-### Instruction:
-You are a senior cloud security engineer reviewing infrastructure.
+You are a Principal Cloud Security Engineer reviewing Terraform infrastructure.
 
-### Violation:
+Return your response STRICTLY in the following Markdown format:
+
+## Security Risk
+<clear explanation>
+
+## Compliance Impact
+<Mention CIS control if applicable>
+
+## Remediation Steps
+<step-by-step terraform fix>
+
+Do not add extra headings.
+Do not repeat the violation.
+Be concise but professional.
+
+Violation Details:
 Resource: {violation["resource"]}
 Issue: {violation["issue"]}
 Severity: {violation["severity"]}
 
-### Security Context:
+Security Context:
 {context_text}
-
-### Task:
-Explain:
-1. Security risk
-2. Compliance impact (CIS reference if applicable)
-3. Clear remediation steps
-
-### Answer:
 """
 
         inputs = self.tokenizer(prompt, return_tensors="pt")
@@ -51,14 +57,13 @@ Explain:
         with torch.no_grad():
             outputs = self.model.generate(
                 **inputs,
-                max_new_tokens=250,
-                do_sample=False,      # deterministic (better for CI)
-                temperature=None      # remove warning
+                max_new_tokens=300,
+                do_sample=False,    
+                pad_token_id=self.tokenizer.eos_token_id
             )
 
         decoded = self.tokenizer.decode(outputs[0], skip_special_tokens=True)
 
-        # 🔥 Remove prompt from output
         response = decoded.split("### Answer:")[-1].strip()
 
         # Optional cleanup
